@@ -1,0 +1,17 @@
+# 用户数据（本地生成，不入库；示例请放在 examples/ 里）
+output/
+user/
+
+# 内置 Python：只保留说明文件，Python 本体让用户自己下载
+python_embeded/*
+!python_embeded/README.txt
+
+# 运行产生的临时文件
+*.tmp
+__pycache__/
+*.pyc
+
+# 系统文件
+Thumbs.db
+.DS_Store
+desktop.ini

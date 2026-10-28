@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="zh"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NodeFlow</title>
+<style>
+:root{--bg:#161616;--card:#353535;--ink:#e8e8e8;--mut:#b4b4b4;--ln:#4a4a4a;--acc:#2dd4bf;--warn:#fbbf24;--bad:#f87171;--pl:#2dd4bf;--ex:#a5b4fc}
+*{box-sizing:border-box}body{margin:0;height:100vh;overflow:hidden;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,"Microsoft YaHei",sans-serif}
+#bar{position:fixed;top:36px;left:0;right:0;height:44px;display:flex;gap:8px;align-items:center;padding:0 12px;background:var(--card);border-bottom:1px solid var(--ln);z-index:5}
+#bar span{color:var(--mut);margin-left:auto;font-size:12px}
+button{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--ln);border-radius:6px;padding:4px 10px;cursor:pointer}
+button:hover,button:focus-visible{border-color:var(--acc);outline:none}button.p{background:var(--acc);color:#fff;border-color:var(--acc)}
+#cv{position:absolute;top:80px;inset-inline:0;bottom:0;overflow:hidden;cursor:grab}#cv.pan{cursor:grabbing}.n{cursor:default}#world{position:absolute;left:0;top:0;width:0;height:0;transform-origin:0 0}#tabs{scrollbar-width:none}#tabs::-webkit-scrollbar{display:none}
+#lk{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible;pointer-events:none}#lk path{fill:none;stroke:var(--acc);stroke-width:2;pointer-events:stroke;cursor:pointer}
+.n{position:absolute;width:380px;background:var(--card);border:1px solid var(--ln);border-radius:8px}
+#lk path.pl{stroke:var(--pl)}#lk path.ex{stroke:var(--ex)}input.r{border-style:dotted;color:var(--mut)}.b>button{margin-top:8px}.b>button+button{margin-left:6px}.n.hit{outline:2px solid var(--acc);outline-offset:2px}
+.h{padding:6px 10px;font-weight:600;border-bottom:1px solid var(--ln);cursor:move;display:flex;justify-content:space-between;user-select:none}
+.h i{font-style:normal;cursor:pointer;color:var(--mut)}
+.b{padding:8px 10px}label{display:flex;justify-content:space-between;align-items:center;gap:6px;color:var(--mut);margin:3px 0}
+input{width:100px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--ln);border-radius:4px;padding:2px 6px;text-align:right}input.a{border-style:dashed}
+pre{margin:8px 0 0;padding-top:8px;border-top:1px solid var(--ln);white-space:pre-wrap;font:inherit}.w{color:var(--warn)}.e{color:var(--bad)}
+.pt{position:absolute;top:50%;margin-top:-7px;width:14px;height:14px;border-radius:50%;background:var(--card);border:2px solid var(--acc);cursor:crosshair}.pt.on{background:var(--acc)}
+.in{left:-17px}.out{right:-17px}.row{position:relative}.row.hit{outline:2px solid var(--acc);border-radius:4px}.val{min-width:100px;text-align:right;color:var(--ink);padding:2px 6px;border:1px dotted var(--ln);border-radius:4px}pre:empty{display:none}canvas{width:100%;border:1px solid var(--ln);border-radius:4px;margin-top:6px}
+#t{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:6px 14px;border-radius:6px;display:none;z-index:9}
+#tabs{position:fixed;top:0;left:0;right:0;height:36px;display:flex;background:var(--bg);border-bottom:1px solid var(--ln);z-index:6;overflow-x:auto}
+.tab{display:flex;align-items:center;gap:10px;padding:0 14px;min-width:120px;max-width:220px;color:var(--mut);border-right:1px solid var(--ln);cursor:pointer;white-space:nowrap}
+.tab span{overflow:hidden;text-overflow:ellipsis;flex:1}.tab.on{background:var(--card);color:var(--ink);box-shadow:inset 0 -2px var(--acc)}
+.tab b{font-weight:400;width:16px;text-align:center}.tab b.d{font-size:0}.tab b.d::after{content:'●';font-size:13px}.tab b.d:hover::after{content:'×';font-size:16px}.tab b:hover{color:var(--bad)}
+.tab.add{min-width:40px;justify-content:center;font-size:18px}
+#empty{position:absolute;left:30px;top:30px;color:var(--mut);display:none}
+html{color-scheme:dark}
+#cv{background-color:#161616;background-image:linear-gradient(#262626 1px,transparent 1px),linear-gradient(90deg,#262626 1px,transparent 1px),linear-gradient(#1d1d1d 1px,transparent 1px),linear-gradient(90deg,#1d1d1d 1px,transparent 1px);background-size:100px 100px,100px 100px,20px 20px,20px 20px}
+#tabs{background:#171717;border-color:#333}.tab{color:#9a9a9a;border-color:#333}.tab.on{background:#171717;color:#fff;box-shadow:inset 0 -2px #fff}
+#bar{background:#202020;border-color:#333}
+button{background:#2c2c2c;color:var(--ink);border-color:#464646}button.p{background:var(--acc);color:#052b26;border-color:var(--acc);font-weight:600}
+.n{background:var(--card);border:1px solid #2a2a2a;border-radius:12px;box-shadow:0 4px 14px #0009}
+.h{background:#2d2d2d;border-radius:12px 12px 0 0;border-bottom:1px solid #262626;color:#bdbdbd}
+.h .dot::after{content:'';position:absolute;left:-10px;right:-8px;top:-12px;bottom:-12px}.h .dot{position:relative;display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:10px;vertical-align:-1px;background:var(--dot,#777);cursor:pointer}.h .dot:hover{box-shadow:0 0 0 3px #ffffff33}
+.n.pl{--dot:var(--pl)}.n.ex{--dot:var(--ex)}
+.row input,.val{width:104px;border:0;border-radius:999px;padding:3px 12px;text-align:right;font:inherit;background:#f1f1f1;color:#151515}
+.row input.a,.row input:read-only,.val{background:#4a4a4a;color:#c8c8c8}.row input::placeholder{color:#9a9a9a}
+.pt{width:14px;height:14px;border:2px solid #1d1d1d;background:#6be26b}.pt.s,.pt.s.on{background:#f5c542}.pt.on{background:#6be26b}
+.pt.rec,.pt.rec.on{background:#4aa3ff}
+#lk path{stroke-width:2.5}#lk path.tn{stroke:#8db48d}#lk path.ts{stroke:#c6b560}#lk circle.tn{fill:#8db48d}#lk circle.ts{fill:#c6b560}
+.n.t-open,.n.t-be,.n.t-exit,.n.t-addp{--dot:#fff}
+.pt.out.ro,.pt.out.ro.on,.pt.s.out.ro{background:#8a8a8a}
+.anc{display:none;position:absolute;top:50%;margin-top:-7px;width:14px;height:14px;border-radius:50%;background:#6f9f6f;border:2px solid #1d1d1d}.anc.l{left:-8px}.anc.r{right:-8px}
+.n.col{width:auto}.n.col .b{display:none}.n.col .h{border-bottom:0;border-radius:12px;padding:8px 20px;white-space:nowrap}.n.col .h i{display:none}.n.col .anc{display:block}
+#lk path.hit{fill:none;stroke:transparent;stroke-linecap:round}#lk g:hover path:not(.hit){stroke-width:4.5}#lk g:hover circle{r:7px}
+</style>
+<div id="tabs"></div><div id="bar"><button data-a="open">＋ 开仓计划</button><button data-a="oexe">＋ 开仓执行</button><button data-a="be">＋ 保本计划</button><button data-a="bexe">＋ 保本执行</button><button data-a="exit">＋ 出货计划</button><button data-a="xexe">＋ 出货执行</button><button data-a="addp">＋ 加仓计划</button><button data-a="adde">＋ 加仓执行</button>
+<button id="fold">打开 output 文件夹</button><span>拖动画布平移，滚轮缩放；拖动圆点连接参数；双击连线删除；Ctrl+Z/Y 撤销重做；PNG 拖入网页会新开标签</span></div>
+<div id="cv"><div id="world"><svg id="lk"></svg></div><div id="empty">空白工作流：点击上方的“＋ 节点”按钮添加节点</div></div><div id="t"></div>
+<script>
+const $=s=>document.querySelector(s),cv=$('#cv'),lk=$('#lk'),world=$('#world');
+const D=['日','一','二','三','四','五','六'];
+const nm=['name','股票名称/代码','','s'];
+const TY={
+ open:{t:'开仓计划',f:[['name','股票名称/代码','002','s'],['price','开仓价',10.23],['stop','止损价',9.82],['target','目标价',13.57],['amt','买入金额(元)',250000],['maxStop','止损%基准',5],['minGain','盈利%基准',30]],o:[['pass','及格价',2],['shares','买入数量',0],['ratio','盈亏比',2],['sp','止损%',1],['sa','止损金额',0],['gp','盈利%',1],['ga','盈利金额',0]],
+  ord:['name','price','stop','target','pass','amt','maxStop','minGain','shares','ratio','sp','sa','gp','ga']},
+ oexe:{t:'开仓执行',f:[nm,['price','开仓价',''],['stop','止损价',''],['target','目标价',''],['shares','执行数量',''],['maxStop','止损%基准',5],['minGain','盈利%基准',30]],o:[['pass','及格价',2],['famt','执行金额(元)',2],['ratio','盈亏比',2],['sp','止损%',1],['sa','止损金额',0],['gp','盈利%',1],['ga','盈利金额',0]],
+  ord:['name','price','stop','target','pass','famt','maxStop','minGain','shares','ratio','sp','sa','gp','ga']},
+ be:{t:'保本计划',f:[nm,['cost','初始保本价',''],['stop','止损价',''],['target','目标价',''],['pass','及格价',''],['price','卖出价',''],['shares','初始数量',''],['tcost','目标保本价',''],['maxSell','卖出%基准',25],['tp','盈利金额目标','','n',0]],o:[['sell','卖出数量',0],['sellp','卖出仓位%',1],['n2','卖出后数量',0],['remp','剩余仓位%',1],['c2','卖出后保本价',2]],
+  ord:['name','cost','stop','target','pass','price','tcost','maxSell','shares','sell','sellp','n2','remp','tp','c2']},
+ bexe:{t:'保本执行',f:[nm,['cost','初始保本价',''],['stop','止损价',''],['target','目标价',''],['pass','及格价',''],['price','卖出价',''],['tcost','目标保本价',''],['maxSell','卖出%基准',25],['shares','初始数量',''],['sell','卖出数量',''],['tp','盈利金额目标','','n',0]],o:[['sellp','卖出仓位%',1],['n2','卖出后数量',0],['remp','剩余仓位%',1],['c2','卖出后保本价',2]],
+  ord:['name','cost','stop','target','pass','price','tcost','maxSell','shares','sell','sellp','n2','remp','tp','c2']},
+ exit:{t:'出货计划',f:[nm,['icost','初始保本价',''],['stop','止损价',''],['target','目标价',''],['pass','及格价',''],['price','当前价',''],['cost','当前保本价',''],['shares','持仓数量',''],['pos','仓位%','','n',1],['tp','盈利金额目标','','n',0],['bias','减仓移损方案 减仓%',25],['ss','减仓移损方案 移损价','','n',2],['n0','初始数量','']],o:[['fl','浮盈金额',0],['flr','盈利金额目标完成度%',1],['lr','浮盈锁定率%',1],['minLock','浮盈锁定率基准',1],['xs','减仓移损方案 卖出数量',0],['rr2','减仓移损方案 盈亏比',2],['c2s','减仓移损方案 卖出后保本价',2],['rn2','减仓移损方案 执行后剩余数量',0],['rp2','减仓移损方案 执行后剩余仓位%',1],['lm2','减仓移损方案 执行后锁定金额',0],['lr2','减仓移损方案 执行后浮盈锁定率',1]],
+  ord:['name','icost','stop','target','pass','price','fl','lr','n0','minLock','flr','shares','pos','tp','cost','bias','ss','xs','rn2','rp2','rr2','c2s','lm2','lr2']},
+ xexe:{t:'出货执行',f:[nm,['icost','初始保本价',''],['stop','止损价',''],['target','目标价',''],['pass','及格价',''],['price','当前价',''],['shares','卖出后剩余数量',''],['cost','当前保本价',''],['tp','盈利金额目标','','n',0],['n0','初始数量','']],o:[['fl','浮盈金额',0],['flr','盈利金额目标完成度%',1],['lr','浮盈锁定率%',1],['minLock','浮盈锁定率基准',1],['pos','仓位%',1],['rr','盈亏比',2],['sp','止损%',1],['sa','止损金额',0],['gp','盈利%',1],['ga','盈利金额',0]],
+  ord:['name','icost','stop','target','pass','price','fl','flr','n0','lr','minLock','shares','pos','tp','cost','rr','sp','sa','gp','ga']},
+ addp:{t:'加仓计划',f:[nm,['amt','买入金额(元)',''],['stop','止损价',''],['target','目标价',''],['price','加仓价',''],['maxStop','止损%基准',5],['minGain','盈利%基准',30],['minLock','浮盈锁定率基准',80],['shares','当前持仓股数',''],['cost','当前保本价','']],o:[['pass','及格价',2],['fl','浮盈金额',0],['buy','买入数量',0],['n2','买入后持仓股数',0],['c2','买入后保本价',2],['ratio','盈亏比',2],['sp','止损%',1],['sa','止损金额',0],['gp','盈利%',1],['ga','盈利金额',0],['gfl','盈利金额占当前浮盈%',1],['sfl','止损金额占当前浮盈%',1],['lk0','买入前浮盈锁定金额',0],['lr0','买入前浮盈锁定率%',1],['lk2','买入后浮盈锁定金额',0],['lr2','买入后浮盈锁定率%',1]],
+  ord:['name','amt','stop','target','pass','price','fl','maxStop','minGain','buy','minLock','shares','n2','c2','cost','ratio','sp','sa','gp','ga','gfl','sfl','lk0','lr0','lk2','lr2']},
+ adde:{t:'加仓执行',f:[nm,['stop','止损价',''],['target','目标价',''],['price','加仓价',''],['maxStop','止损%基准',5],['minGain','盈利%基准',30],['buy','执行数量',''],['minLock','浮盈锁定率基准',80],['shares','买入前持仓股数',''],['cost','买入后保本价','']],o:[['famt','执行金额(元)',2],['pass','及格价',2],['fl','浮盈金额',0],['n2','买入后持仓股数',0],['ratio','盈亏比',2],['sp','止损%',1],['sa','止损金额',0],['gp','盈利%',1],['ga','盈利金额',0],['gfl','盈利金额占当前浮盈%',1],['sfl','止损金额占当前浮盈%',1],['fp0','买入前浮盈%',1],['lk0','买入前浮盈锁定金额',0],['lr0','买入前浮盈锁定率%',1],['fp2','买入后浮盈%',1],['lk2','买入后浮盈锁定金额',0],['lr2','买入后浮盈锁定率%',1]],
+  ord:['name','famt','stop','target','pass','price','fl','maxStop','minGain','buy','minLock','shares','n2','cost','ratio','sp','sa','gp','ga','gfl','sfl','fp0','lk0','lr0','fp2','lk2','lr2']}};
+const REC={open:['price','stop','target','amt','maxStop','minGain'],oexe:['price','stop','shares'],be:['price','tcost','maxSell'],bexe:['price','sell'],exit:['price','bias','ss'],xexe:['stop','price','shares','cost'],addp:['amt','stop','price','maxStop','minGain','minLock'],adde:['price','buy','cost']};// 蓝点：建议手动输入的参数
+const PL=['open','be','exit','addp'];
+const DEF={'open>oexe':[['name','name'],['stop','stop'],['target','target'],['maxStop','maxStop'],['minGain','minGain']],
+'oexe>be':[['name','name'],['price','cost'],['shares','shares'],['stop','stop'],['stop','tcost'],['pass','pass'],['target','target']],
+'be>bexe':[['name','name'],['cost','cost'],['stop','stop'],['target','target'],['pass','pass'],['price','price'],['tcost','tcost'],['maxSell','maxSell'],['shares','shares'],['sell','sell']],
+'bexe>exit':[['name','name'],['n2','shares'],['c2','cost'],['cost','icost'],['target','target'],['pass','pass'],['remp','pos']],
+'exit>xexe':[['name','name'],['icost','icost'],['stop','stop'],['target','target'],['pass','pass'],['price','price'],['tp','tp'],['shares','shares'],['cost','cost']],
+'xexe>addp':[['name','name'],['price','price'],['stop','stop'],['target','target'],['shares','shares'],['cost','cost']],
+'addp>adde':[['name','name'],['stop','stop'],['target','target'],['maxStop','maxStop'],['minGain','minGain'],['minLock','minLock'],['shares','shares']]};
+let W=[],G=null,V={x:0,y:0,z:1};
+const f1=(x,d=1)=>(+x).toFixed(d),dt=t=>{const d=t?new Date(t):new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 周${D[d.getDay()]} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`};
+const stamp=n=>{const d=new Date(),m=n&&n.mt?new Date(n.mt):d,p=x=>String(x).padStart(2,'0');return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(m.getHours())}${p(m.getMinutes())}${p(m.getSeconds())}-${p(d.getHours())}${p(d.getMinutes())}`};
+function toast(m){const t=$('#t');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',3500)}
+
+/* ---- 计算 ---- */
+const pc=(a,b)=>f1(a/b*100),R=x=>Math.round(x),K={t:'#ff00ff',e:'#ffffff',s:'#ff0000',c:'#facc15',n:'#22c55e',g:'#9a9a9a'},TC='#a5b4fc';
+const bl=(pl,P,C0,S,C2,rp,rc)=>[{p:P,col:K.e,l:`${pl} ${P}`,r:rp},{p:C0,col:K.c,l:`原保本价 ${C0}`},...(S>0?[{p:S,col:K.s,l:`止损价 ${S}`}]:[]),{p:C2,col:K.n,l:`卖出后保本价 ${f1(C2,2)}`,r:rc}];
+const opn=(v,ex)=>{const p=+v.price,s=+v.stop,g=+v.target,q=ex?'执行':'买入',w=[];let sh=ex?+v.shares:0,a=ex?+(p*sh).toFixed(2):+v.amt;
+ if(!(g>p&&p>s&&(ex?sh>0:a>0)))return{err:`输入无效：需 目标价 > 开仓价 > 止损价，且${ex?'执行数量':'买入金额'} > 0`};
+ if(!ex){const raw=a/p,er=(1-Math.floor(raw/100)*100/raw)*100;sh=Math.floor(raw/100)*100;if(er>=5)w.push(`【重要提醒】买入数量取整误差 ${f1(er)}% 较高，该股价对您的资金量过高`)}
+ const ps=+((p+g)/2).toFixed(2),r=(g-p)/(p-s),sp=(p-s)/p*100,sa=a*(p-s)/p,gp=(g-p)/p*100,ga=a*(g-p)/p;
+ if(sp>=+v.maxStop)w.push(`【重要提醒】${f1(sp)}% 的止损大于合理值 ${v.maxStop}%`);
+ if(gp<=+v.minGain)w.push(`【重要提醒】${f1(gp)}% 的盈利小于合理值 ${v.minGain}%`);
+ return{title:`${v.name} ${ex?'开仓执行':'开仓计划'}`,...(ex?{tc:TC}:{}),w,vals:{pass:ps,...(ex?{famt:a}:{shares:sh}),ratio:r,sp,sa,gp,ga},chart:{lines:[{p:g,col:K.t,l:`目标价 ${g}`,r:`盈利 +${f1(gp)}% / +${R(ga)}元`},{p:ps,col:'#ff8c00',l:`及格价 ${f1(ps,2)}`},{p,col:'#00ff00',...(ex?{}:{dash:1}),l:`开仓价 ${p}`,r:`盈亏比 ${f1(r,2)} : 1`},{p:s,col:K.s,l:`止损价 ${s}`,r:`止损 -${f1(sp)}% / -${R(sa)}元`}],footR:1,foot:[`${q}金额 ${a}元　${q}数量 ${sh}股`]}}};
+const adn=(v,ex)=>{const P=+v.price,S=+v.stop,TG=+v.target,N=+v.shares,CI=+v.cost,PS=+((P+TG)/2).toFixed(2),w=[],bad=[];
+ if([v.price,v.stop,v.target,v.shares,v.cost,ex?v.buy:v.amt].some(x=>x===''||x==null))return{err:`参数无效：请填写 加仓价、止损价、目标价、${ex?'买入前持仓股数、买入后保本价、执行数量':'当前持仓股数、当前保本价、买入金额'}`};
+ if(!(TG>P&&P>S&&P>0))bad.push('目标价 > 加仓价 > 止损价');if(!(N>=100))bad.push(`${ex?'买入前持仓股数':'当前持仓股数'} ≥ 100`);if(!(P>CI))bad.push(`加仓价 > ${ex?'买入后保本价':'当前保本价'}（需有浮盈）`);
+ let buy,a,er;if(ex){buy=+v.buy;a=+(P*buy).toFixed(2);if(!(buy>0))bad.push('执行数量 > 0')}else{a=+v.amt;if(!(a>0))bad.push('买入金额 > 0')}
+ if(bad.length)return{err:'参数无效：需 '+bad.join('，')};
+ if(!ex){const raw=a/P;buy=Math.floor(raw/100)*100;if(buy<100)return{err:'加仓数量不足100股，无法加仓'};er=(1-buy/raw)*100;if(er>=5)w.push(`【重要提醒】买入数量取整误差 ${f1(er)}% 较高，该股价对您的资金量过高`)}
+ const N2=N+buy,C0=ex?(N2*CI-buy*P)/N:CI,C2=ex?CI:(N*CI+buy*P)/N2,fl=N*(P-C0),ratio=(TG-P)/(P-S),sp=(P-S)/P*100,sa=N2*(P-S),gp=(TG-P)/P*100,ga=N2*(TG-P),lk0=N*(S-C0),lr0=lk0/fl*100,lk2=N2*(S-C2),lr2=lk2/fl*100,ML=+v.minLock,
+  fp0=C0>0?(P-C0)/C0*100:undefined,fp2=C2>0?(P-C2)/C2*100:undefined;
+ if(sp>=+v.maxStop)w.push(`【重要提醒】${f1(sp)}% 的止损大于合理值 ${v.maxStop}%`);
+ if(gp<=+v.minGain)w.push(`【重要提醒】${f1(gp)}% 的盈利小于合理值 ${v.minGain}%`);
+ if(C2>=S)w.push(ex?'【重要提醒】加仓后保本价已高于止损价':'【重要提醒】本加仓计划过于激进，会导致保本价大于止损价');
+ else if(lr2<=ML)w.push(`【重要提醒】${ex?'加仓后':'本加仓计划过于激进，'}浮盈锁定率 ${f1(lr2)}% 低于合理值 ${v.minLock}%`);
+ const pl='加仓价',fa=ex?'执行':'买入';
+ return{title:`${v.name} ${ex?'加仓执行':'加仓计划'}`,...(ex?{tc:TC}:{}),w,vals:{fl,pass:PS,...(ex?{famt:a,fp0,fp2}:{buy,c2:+C2.toFixed(4)}),n2:N2,ratio,sp,sa,gp,ga,gfl:ga/fl*100,sfl:sa/fl*100,lk0,lr0,lk2,lr2},
+  chart:{lines:[{p:TG,col:K.t,l:`目标价 ${TG}`,r:`盈利 +${f1(gp)}% / +${R(ga)}元`},...(PS>0?[{p:PS,col:'#ff8c00',l:`及格价 ${f1(PS,2)}`}]:[]),{p:P,col:ex?'#6fa86f':'#00ff00',...(ex?{}:{dash:1}),l:`${pl} ${P}`,r:`盈亏比 ${f1(ratio,2)} : 1`},{p:S,col:K.s,l:`止损价 ${S}`,r:`止损 -${f1(sp)}% / -${R(sa)}元`},
+   ...(ex?[]:[{p:C0,col:'#6fa86f',reg:1,bk:1,l:`当前保本价 ${C0}`,r:`浮盈锁定率 ${f1(lr0)}% ${R(lk0)}元`}]),{p:C2,col:'#00ff00',bk:1,...(ex?{}:{dash:1}),l:`${fa}后保本价 ${f1(C2,2)}`,r:`浮盈锁定率 ${f1(lr2)}% ${R(lk2)}元 / 持仓 ${N2}股`}],
+   footR:1,axis:1,foot:[`${fa}金额 ${a}元　${fa}数量 ${buy}股`]}}};
+const C={
+open(v){return opn(v,0)},
+oexe(v){return opn(v,1)},
+be(v){const P=+v.price,C0=+v.cost,N=+v.shares,T=+v.tcost,S=+v.stop,PS=+v.pass;
+ if(!(N>0&&P>T&&P>0))return{err:'参数无效：需 初始数量 > 0，卖出价 > 目标保本价'};
+ const x=N*(C0-T)/(T-P);if(!(x<0))return{err:'无需减仓，或目标保本价无法通过卖出达到'};
+ const s=Math.ceil(-x/100)*100,N2=N-s;if(N2<=0)return{err:'计算结果为清仓，参数无效'};
+ const C2=(N*C0-s*P)/N2,sp=s/N*100,rp=100-sp,w=[];
+ if(sp>=+v.maxSell)w.push(`【提醒】卖出仓位 ${f1(sp)}% 超出基准 ${v.maxSell}%`);
+ if(S>0&&T>S)w.push(`【重要提醒】目标保本价 ${T} 高于止损价 ${S}`);
+ return{title:`${v.name} 保本计划`,w,vals:{sell:s,sellp:sp,n2:N2,remp:rp,c2:+C2.toFixed(4)},chart:{lines:[{p:P,col:'#00ff00',dash:1,l:`卖出价 ${P}`,r:`卖出数量 ${s}股 / 卖出仓位 ${f1(sp)}%`},{p:C0,col:'#00ff00',l:`初始保本价 ${C0}`},...(S>0?[{p:S,col:K.s,l:`止损价 ${S}`}]:[]),{p:C2,col:'#00ff00',dash:1,l:`卖出后保本价 ${f1(C2,2)}`,r:`卖出后数量 ${N2}股 / 剩余仓位 ${f1(rp)}%`},...(PS>0?[{p:PS,col:'#ff8c00',l:`及格价 ${f1(PS,2)}`}]:[])],footR:1,foot:[`目标保本价 ${T}`]}}},
+bexe(v){const N=+v.shares,C0=+v.cost,P=+v.price,s=+v.sell,S=+v.stop,T=+v.tcost,PS=+v.pass;
+ if(!(N>0&&P>0&&s>0&&s<N))return{err:'参数无效：需 0 < 卖出数量 < 初始数量，卖出价 > 0'};
+ const N2=N-s,C2=(N*C0-s*P)/N2,sp=s/N*100,rp=100-sp,w=[];
+ if(sp>=+v.maxSell)w.push(`【提醒】卖出仓位 ${f1(sp)}% 超出基准 ${v.maxSell}%`);
+ if(S>0&&C2>S)w.push(`【重要提醒】卖出后保本价 ${f1(C2,2)} 仍高于止损价 ${S}`);
+ return{title:`${v.name} 保本执行`,tc:TC,w,vals:{sellp:sp,n2:N2,remp:rp,c2:+C2.toFixed(4)},chart:{lines:[{p:P,col:'#6fa86f',reg:1,l:`卖出价 ${P}`,r:`卖出数量 ${s}股 / 卖出仓位 ${f1(sp)}%`},{p:C0,col:'#6fa86f',reg:1,l:`初始保本价 ${C0}`},...(S>0?[{p:S,col:K.s,l:`止损价 ${S}`}]:[]),{p:C2,col:'#00ff00',l:`卖出后保本价 ${f1(C2,2)}`,r:`卖出后数量 ${N2}股 / 剩余仓位 ${f1(rp)}%`},...(PS>0?[{p:PS,col:'#ff8c00',l:`及格价 ${f1(PS,2)}`}]:[])],footR:1,foot:T>0?[`目标保本价 ${T}`]:[]}}},
+exit(v){const P=+v.price,C0=+v.cost,S=+v.stop,N=+v.shares,B=v.bias===''||v.bias==null?NaN:+v.bias,SS=v.ss===''||v.ss==null?NaN:+v.ss;
+ if(v.cost===''||v.cost==null||!(P>C0&&N>0))return{err:'参数无效：需 填写当前保本价，当前价 > 当前保本价，持仓数量 > 0'};
+ const fl=N*(P-C0),TP=+v.tp,TG=+v.target,IC=+v.icost,mn=TG>IC?Math.min(100,(P-IC)/(TG-IC)*100):NaN,PS=+v.pass,PO=+v.pos,flr=TP>0?fl/TP*100:undefined,lk=N*(S-C0),lr=lk/fl*100,w=[],ft=[],
+  ln=[{p:P,col:K.e,l:`当前价 ${P}`,r:`浮盈 +${R(fl)}元`+(flr!=null?` / 盈利金额目标完成度% ${f1(flr)}`:'')},{p:S,col:K.s,l:`止损价 ${S}`},{p:C0,col:'#00ff00',bk:1,l:`当前保本价 ${C0}`,r:`浮盈锁定率 ${f1(lr)}% ${R(lk)}元`+(PO>0?` / 仓位 ${f1(PO)}%`:'')},...(TG>0?[{p:TG,col:'#a86fa8',reg:1,l:`目标价 ${TG}`,...(TP>0?{r:`盈利金额目标 ${R(TP)}元`}:{})}]:[]),...(PS>0?[{p:PS,col:'#ff8c00',l:`及格价 ${f1(PS,2)}`}]:[])];
+ const rr=z=>TG>0&&P>z?(TG-P)/(P-z):undefined,badB=B>=0&&PO>0&&B>PO+1e-9,badS=SS<S-1e-9;
+ let xs,rn2,rp2,c2s,rr2,lm2,lr2;
+ if(badB)w.push(`【重要提醒】减仓% ${f1(B)}% 大于仓位% ${f1(PO)}%，请降低减仓%`);
+ if(badS)w.push(`【重要提醒】减仓移损方案 移损价 ${f1(SS,2)} 低于止损价 ${S}，请提高移损价`);
+ if(PO>0&&B>=0&&!badB&&SS>=S-1e-9){
+  const x=Math.min(N,Math.round(N*B/PO/100)*100);
+  if(x>=N){xs=N;rn2=0;rp2=0;ft.push(`减仓移损方案：全部卖出 ${N} 股`)}
+  else{const N2=N-x,C2=(N*C0-x*P)/N2;xs=x;rn2=N2;c2s=+C2.toFixed(4);rr2=rr(SS);lm2=N2*(SS-C2);lr2=lm2/fl*100;rp2=PO*N2/N;
+   ft.push(`减仓移损方案：卖出 ${xs} 股（占 ${pc(xs,N)}%），止损价移至 ${f1(SS,2)}`);
+   if(+f1(lr2)<+f1(mn))w.push(`【重要提醒】减仓移损方案 执行后浮盈锁定率 ${f1(lr2)}% 低于基准 ${f1(mn)}%`);
+   ln.push({p:SS,col:K.s,dash:1,l:`减仓移损方案 移损价 ${f1(SS,2)}`,...(rr2!=null?{r:`盈亏比 ${f1(rr2,2)} : 1`}:{})},{p:C2,col:'#00ff00',dash:1,bk:1,l:`减仓移损方案 卖出后保本价 ${f1(C2,2)}`,r:`浮盈锁定率 ${f1(lr2)}% ${R(lm2)}元`+(rp2!=null?` / 仓位 ${f1(rp2)}%`:'')})}
+ }else if(badB)ft.push('减仓%不能大于仓位%');
+ else if(badS)ft.push('移损价不能低于止损价');
+ else ft.push(!(PO>0)?'请填写仓位%':!(B>=0)?'请填写减仓%':'请填写移损价');
+ return{title:`${v.name} 出货计划`,w,vals:{fl,flr,lr,minLock:Number.isFinite(mn)?mn:undefined,xs,rn2,rp2,rr2,c2s,lm2,lr2},chart:{lines:ln,footR:1,axis:1,foot:ft}}},
+xexe(v){const P=+v.price,C0=+v.cost,S=+v.stop,N=+v.shares;
+ if(v.cost===''||v.cost==null||!(P>C0&&N>0))return{err:'参数无效：需 填写当前保本价，当前价 > 当前保本价，卖出后剩余数量 > 0'};
+ const fl=N*(P-C0),TP=+v.tp,TG=+v.target,IC=+v.icost,mn=TG>IC?Math.min(100,(P-IC)/(TG-IC)*100):NaN,PS=+v.pass,N0=+v.n0,PO=N0>0?N/N0*100:undefined,flr=TP>0?fl/TP*100:undefined,lk=N*(S-C0),lr=lk/fl*100,
+  rr=TG>0&&S>0&&P>S?(TG-P)/(P-S):undefined,sp=S>0?(P-S)/P*100:undefined,sa=S>0?N*(P-S):undefined,gp=TG>0?(TG-P)/P*100:undefined,ga=TG>0?N*(TG-P):undefined,
+  sg=(x,a,b)=>(x>=0?a:b);
+ return{title:`${v.name} 出货执行`,tc:TC,w:[],vals:{fl,flr,lr,minLock:Number.isFinite(mn)?mn:undefined,pos:PO,rr,sp,sa,gp,ga},chart:{lines:[{p:P,col:K.e,l:`当前价 ${P}`,r:`浮盈 +${R(fl)}元`+(flr!=null?` / 完成度 ${f1(flr)}`:'')+(rr!=null?` / 盈亏比 ${f1(rr,2)} : 1`:'')},...(TG>0?[{p:TG,col:'#a86fa8',reg:1,l:`目标价 ${TG}`,r:`盈利 ${sg(gp,'+','')}${f1(gp)}% / ${sg(ga,'+','')}${R(ga)}元`}]:[]),...(PS>0?[{p:PS,col:'#ff8c00',l:`及格价 ${f1(PS,2)}`}]:[]),{p:S,col:K.s,l:`止损价 ${S}`,...(sp!=null?{r:`止损 ${sg(sp,'-','+')}${f1(Math.abs(sp))}% / ${sg(sa,'-','+')}${R(Math.abs(sa))}元`}:{})},{p:C0,col:'#00ff00',bk:1,l:`当前保本价 ${C0}`,r:`浮盈锁定率 ${f1(lr)}% ${R(lk)}元`+(PO!=null?` / 仓位 ${f1(PO)}%`:'')}],footR:1,axis:1,foot:[]}}},
+addp(v){return adn(v,0)},
+adde(v){return adn(v,1)}};
+const calc=n=>C[n.type]?C[n.type](n.v):null;
+
+/* ---- 节点与图 ---- */
+const kind=t=>PL.includes(t)?'pl':'ex',typ=(t,k)=>(TY[t].f.find(x=>x[0]==k)||[])[3]||'n',byId=id=>G.nodes.find(n=>n.id==id);
+const outv=(n,k)=>n.c&&n.c.vals&&k in n.c.vals?n.c.vals[k]:n.v[k];
+let ct,vt,track=false;
+const snapStr=g=>{const L=new Set(g.links.map(l=>l.b+'|'+l.bk));return JSON.stringify({nodes:g.nodes.map(n=>({id:n.id,type:n.type,x:n.x,y:n.y,v:Object.fromEntries(Object.entries(n.v).filter(([k])=>!L.has(n.id+'|'+k)))})),links:g.links})};
+const snapTs=g=>Object.fromEntries(g.nodes.map(n=>[n.id,[n.ct,n.mt]]));
+function hist0(g){g.h=[snapStr(g)];g.ht=[snapTs(g)];g.hp=0}
+function commit(){clearTimeout(ct);if(!G)return;const s=snapStr(G);if(s===G.h[G.hp]){G.ht[G.hp]=snapTs(G);return}G.h.length=G.hp+1;G.ht.length=G.hp+1;G.h.push(s);G.ht.push(snapTs(G));G.hp++;if(G.h.length>300){G.h.shift();G.ht.shift();G.hp--}}
+function touch(typing){G.dirty=true;persist();renderTabs();if(typing){clearTimeout(ct);ct=setTimeout(commit,500)}else commit()}
+function restore(snap,ts){const prev=new Map(G.nodes.map(n=>[n.id,{v:{...n.v},ct:n.ct,mt:n.mt,col:n.col}])),g=fromData(JSON.parse(snap),1);G.nodes.forEach(n=>n.el.remove());G.nodes=g.nodes;G.links=g.links;G.uid=g.uid;G.nodes.forEach(n=>world.append(n.el));G.dirty=true;
+ const tk=track;track=false;upd();const now=Date.now();
+ G.nodes.forEach(n=>{const o=prev.get(n.id),t=ts&&ts[n.id];if(o){if(o.col){n.col=1;n.el.classList.add('col')}n.ct=o.ct;n.mt=TY[n.type].f.some(([k])=>String(o.v[k]??'')!==String(n.v[k]??''))?now:o.mt}else if(t){n.ct=t[0];n.mt=t[1]}});
+ upd();track=tk;G.ht[G.hp]=snapTs(G);renderTabs();persist()}
+function undo(){commit();if(G.hp<=0)return;G.hp--;restore(G.h[G.hp],G.ht[G.hp])}
+function redo(){commit();if(G.hp>=G.h.length-1)return;G.hp++;restore(G.h[G.hp],G.ht[G.hp])}
+function applyView(){world.style.transform=`translate(${V.x}px,${V.y}px) scale(${V.z})`;world.style.setProperty('--iz',1/V.z);const z=V.z,p=`${V.x}px ${V.y}px`;cv.style.backgroundPosition=[p,p,p,p].join(',');cv.style.backgroundSize=`${100*z}px ${100*z}px,${100*z}px ${100*z}px,${20*z}px ${20*z}px,${20*z}px ${20*z}px`}
+function setG(g){G=g;V=g.view;applyView()}
+const w2=m=>{const r=cv.getBoundingClientRect();return[(m.clientX-r.left-V.x)/V.z,(m.clientY-r.top-V.y)/V.z]};
+const viewSave=()=>{clearTimeout(vt);vt=setTimeout(persist,400)};
+cv.onmousedown=e=>{if(e.button!==0||e.target.closest('.n'))return;e.preventDefault();if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+ const sx=e.clientX,sy=e.clientY,ox=V.x,oy=V.y;cv.classList.add('pan');
+ document.onmousemove=m=>{V.x=ox+m.clientX-sx;V.y=oy+m.clientY-sy;applyView()};document.onmouseup=()=>{document.onmousemove=document.onmouseup=null;cv.classList.remove('pan');viewSave()}};
+cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top,d=e.deltaMode==1?e.deltaY*33:e.deltaY,z=Math.min(3,Math.max(.2,V.z*Math.exp(-d*.0015))),wx=(mx-V.x)/V.z,wy=(my-V.y)/V.z;
+ V.x=mx-wx*z;V.y=my-wy*z;V.z=z;applyView();viewSave()},{passive:false});
+document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey)||e.altKey)return;const k=String(e.key).toLowerCase();if(k=='z'){e.preventDefault();e.shiftKey?redo():undo()}else if(k=='y'){e.preventDefault();redo()}});
+function add(t,x,y,v,id,g=G,ts){const now=Date.now(),n={id:id||g.uid++,type:t,x,y,v:{...v},col:ts&&ts.col?1:0,ct:ts&&ts.ct||now,mt:ts&&ts.mt||ts&&ts.ct||now,dots:{},inp:{},val:{}};g.uid=Math.max(g.uid,n.id+1);
+ TY[t].f.forEach(([k,,d])=>{if(n.v[k]==null)n.v[k]=d});build(n);g.nodes.push(n);if(g===G)world.append(n.el);return n}
+function dot(n,s,k){const d=document.createElement('i');d.className='pt '+(s=='i'?'in':'out')+(typ(n.type,k)=='s'?' s':'')+(REC[n.type]&&REC[n.type].includes(k)?' rec':'');d.onmousedown=ev=>{ev.preventDefault();ev.stopPropagation();pdown(n,s,k)};n.dots[s+k]=d;return d}
+function build(n){const e=n.el=document.createElement('div');e.className='n '+kind(n.type)+' t-'+n.type+(n.col?' col':'');e.style.cssText=`left:${n.x}px;top:${n.y}px`;
+ e.innerHTML=`<div class="h"><span><b class="dot"></b>${TY[n.type].t}</span><i title="删除">✕</i></div><div class="b"></div>`;const b=e.querySelector('.b');
+ const row=(k,l)=>{const r=document.createElement('label');r.className='row';r.textContent=l;r._n=n;r._k=k;b.append(r);return r};
+ const mkF=([k,l])=>{const r=row(k,l),i=n.inp[k]=document.createElement('input');i.value=n.v[k];i.oninput=()=>{n.v[k]=i.value;n.mt=Date.now();touch(true);upd()};r.append(i,...(n.type=='open'?[]:[dot(n,'i',k)]),dot(n,'o',k))},
+  mkO=([k,l])=>{const r=row(k,l),s=n.val[k]=document.createElement('span');s.className='val';const d=dot(n,'o',k);d.classList.add('ro');r.append(s,d)},T=TY[n.type],
+  ord=T.ord||[...T.f.map(x=>x[0]),...T.o.map(x=>x[0])];
+ ord.forEach(k=>{const f=T.f.find(x=>x[0]==k);f?mkF(f):mkO(T.o.find(x=>x[0]==k))});
+ if(n.type=='oexe')n.inp.shares.placeholder='实际成交股数';
+ n.pre=document.createElement('pre');n.pv=document.createElement('div');const sb=document.createElement('button');sb.className='p';sb.textContent='保存为图片';sb.onclick=()=>save(n);const sj=document.createElement('button');sj.textContent='保存为json';sj.onclick=()=>saveJson(n);b.append(n.pre,n.pv,sb,sj);
+ n.cin=document.createElement('i');n.cin.className='anc l';n.cout=document.createElement('i');n.cout.className='anc r';e.append(n.cin,n.cout);
+ const tdot=e.querySelector('.dot');if(tdot){tdot.onmousedown=ev=>ev.stopPropagation();tdot.onclick=()=>{n.col=n.col?0:1;e.classList.toggle('col',!!n.col);touch();upd()}}
+ const h=e.querySelector('.h');h.onmousedown=ev=>{if(ev.target.tagName=='I')return;const[wx,wy]=w2(ev),dx=wx-n.x,dy=wy-n.y;let mv=0;
+  document.onmousemove=m=>{mv=1;const[x,y]=w2(m);n.x=x-dx;n.y=y-dy;e.style.left=n.x+'px';e.style.top=n.y+'px';draw()};document.onmouseup=()=>{document.onmousemove=document.onmouseup=null;if(mv)touch()}};
+ h.querySelector('i').onclick=()=>{G.ht[G.hp]=snapTs(G);G.nodes=G.nodes.filter(q=>q!=n);G.links=G.links.filter(l=>l.a!=n.id&&l.b!=n.id);e.remove();touch();upd()}}
+function evalG(){for(let r=0;r<G.nodes.length;r++)G.nodes.forEach(n=>{G.links.forEach(l=>{if(l.b!=n.id)return;const x=outv(byId(l.a),l.ak),nv=x==null||Number.isNaN(x)?'':x;if(track&&String(n.v[l.bk]??'')!==String(nv))n.mt=Date.now();n.v[l.bk]=nv});n.c=C[n.type]?C[n.type](n.v):null})}
+function upd(){$('#empty').style.display=G.nodes.length?'none':'block';evalG();G.nodes.forEach(n=>{const c=n.c,L=G.links;
+ TY[n.type].f.forEach(([k,,,,dc])=>{const i=n.inp[k],lk=L.some(l=>l.b==n.id&&l.bk==k),x=n.v[k],tx=lk&&dc!=null&&x!==''&&!Number.isNaN(+x)?(+x).toFixed(dc):x;if(document.activeElement!=i&&i.value!=tx)i.value=tx;i.readOnly=lk;i.classList.toggle('a',lk);n.dots['i'+k]&&n.dots['i'+k].classList.toggle('on',lk)});
+ for(const q in n.dots)if(q[0]=='o')n.dots[q].classList.toggle('on',L.some(l=>l.a==n.id&&l.ak==q.slice(1)));
+ TY[n.type].o.forEach(([k,,d])=>{const x=c&&c.vals?c.vals[k]:null;n.val[k].textContent=x==null||Number.isNaN(+x)?'—':(+x).toFixed(d)});
+ n.pre.innerHTML=c&&c.err?`<span class="e">${c.err}</span>`:'';n.pv.replaceChildren(...(c&&!c.err?[card(c,n.mt)]:[]));
+ });draw()}
+const ctr=el=>{const r=cv.getBoundingClientRect(),q=el.getBoundingClientRect();return[(q.left+q.width/2-r.left-V.x)/V.z,(q.top+q.height/2-r.top-V.y)/V.z]};
+const bez=(x1,y1,x2,y2,k=1)=>{const d=Math.max(40,Math.abs(x2-x1)/2)*k;return`M${x1},${y1}C${x1+d},${y1} ${x2-d},${y2} ${x2},${y2}`};
+const svgp=()=>document.createElementNS('http://www.w3.org/2000/svg','path');
+function draw(){lk.innerHTML='';G.links.forEach(l=>{const A=byId(l.a),B=byId(l.b);if(!A||!B)return;const[x1,y1]=ctr(A.col?A.cout:A.dots['o'+l.ak]),[x2,y2]=ctr(B.col?B.cin:B.dots['i'+l.bk]),p=svgp();
+ p.setAttribute('d',bez(x1,y1,x2,y2));const cl=typ(A.type,l.ak)=='s'?'ts':'tn',del=()=>{G.links=G.links.filter(q=>q!=l);touch();upd()},c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+ p.setAttribute('class',cl);p.style.pointerEvents='none';const hp=svgp(),gg=document.createElementNS('http://www.w3.org/2000/svg','g');hp.setAttribute('d',bez(x1,y1,x2,y2));hp.setAttribute('class','hit');hp.style.strokeWidth='calc(12px * var(--iz,1))';hp.ondblclick=del;c.setAttribute('class',cl);c.setAttribute('cx',(x1+x2)/2);c.setAttribute('cy',(y1+y2)/2);c.setAttribute('r',5);c.style.pointerEvents='all';c.ondblclick=del;gg.append(hp,p,c);lk.append(gg)})}
+const reach=(s,t)=>s==t||G.links.some(l=>l.a==s.id&&reach(byId(l.b),t));
+function pdown(n,side,k){if(side=='i'){const l=G.links.find(q=>q.b==n.id&&q.bk==k);if(l){G.links=G.links.filter(q=>q!=l);touch();upd();return pdrag(byId(l.a),'o',l.ak)}}pdrag(n,side,k)}
+function pdrag(n,side,k){const[sx,sy]=ctr(n.dots[side+k]),t=svgp();t.style.pointerEvents='none';t.setAttribute('class',typ(n.type,k)=='s'?'ts':'tn');lk.append(t);
+ const hit=m=>{const el=document.elementFromPoint(m.clientX,m.clientY),row=el&&el.closest('.row'),o=row&&row._n;if(!o||o==n)return null;
+  const kk=row._k,[a,ak,b,bk]=side=='o'?[n,k,o,kk]:[o,kk,n,k];if(!o.dots[(side=='o'?'i':'o')+kk]||typ(a.type,ak)!=typ(b.type,bk)||reach(b,a))return null;return{a,ak,b,bk,row}};
+ let last=null;
+ document.onmousemove=m=>{const[X,Y]=w2(m);
+  t.setAttribute('d',side=='o'?bez(sx,sy,X,Y):bez(X,Y,sx,sy));const h=hit(m);if(last)last.classList.remove('hit');last=h&&h.row;if(last)last.classList.add('hit')};
+ document.onmouseup=m=>{document.onmousemove=document.onmouseup=null;t.remove();if(last)last.classList.remove('hit');const h=hit(m);
+  if(h){G.links=G.links.filter(q=>!(q.b==h.b.id&&q.bk==h.bk));G.links.push({a:h.a.id,ak:h.ak,b:h.b.id,bk:h.bk});touch();upd()}}}
+/* ---- 预览 / 图片 ---- */
+function chartCard(c,t){const h=c.chart,W=840,F='"Microsoft YaHei",sans-serif',L=[...h.lines].sort((a,b)=>b.p-a.p);let ys,by,fr=L.map(()=>false);
+ if(h.axis){const qs=L.filter(q=>!q.bk),all=qs.length?qs:L,qH=Math.max(...all.map(q=>q.p)),qL=Math.min(...all.map(q=>q.p)),rg=Math.max(qH-qL,Math.abs(qH)*.05,.01);
+  fr=L.map(q=>!!q.bk&&q.p<qL-rg);const nr=L.filter((q,i)=>!fr[i]),hi=Math.max(...nr.map(q=>q.p)),lo=Math.min(...nr.map(q=>q.p));
+  ys=L.map((q,i)=>fr[i]?0:hi>lo?170+(hi-q.p)/(hi-lo)*450:170);by=[];let last=-1e9,end=0;
+  L.forEach((q,i)=>{if(!fr[i]){by[i]=Math.max(ys[i]-10,last+28);last=by[i];end=Math.max(end,ys[i],by[i])}});
+  let yy=end+56;L.forEach((q,i)=>{if(fr[i]){ys[i]=yy;by[i]=yy-10;yy+=46}})}
+ else{const hi=L[0].p,lo=L[L.length-1].p;ys=L.map(q=>hi>lo?170+(hi-q.p)/(hi-lo)*450:170);for(let i=1;i<ys.length;i++)ys[i]=Math.max(ys[i],ys[i-1]+40);by=ys.map(y=>y-10)}
+ const ft=h.foot||[],y0=Math.max(...ys,...by)+48,H=Math.ceil(y0+ft.length*30+24),k=document.createElement('canvas');k.width=W;k.height=H;
+ const g=k.getContext('2d');g.fillStyle='#000';g.fillRect(0,0,W,H);g.textBaseline='alphabetic';g.textAlign='left';
+ g.fillStyle=c.tc||'#fff';g.font='bold 34px '+F;g.fillText(c.title,24,52);g.fillStyle='#9a9a9a';g.font='22px '+F;g.fillText(dt(t),24,88);
+ L.forEach((q,i)=>{const y=ys[i];g.globalAlpha=q.alpha||1;g.setLineDash(q.dash?[10,6]:[]);g.strokeStyle=q.col;g.lineWidth=2;g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();g.setLineDash([]);
+  if(fr[i]){const cx=W/2;g.fillStyle='#000';g.fillRect(cx-24,y-8,48,16);g.strokeStyle=q.col;g.lineWidth=2;g.beginPath();[[-20,0],[-12,-6],[-4,6],[4,-6],[12,6],[20,0]].forEach(([dx,dy],j)=>j?g.lineTo(cx+dx,y+dy):g.moveTo(cx+dx,y+dy));g.stroke()}
+  else if(by[i]-(y-10)>8){g.strokeStyle=q.col;g.lineWidth=2;g.beginPath();g.moveTo(12,y);g.lineTo(12,by[i]-9);g.lineTo(20,by[i]-9);g.stroke()}
+  g.fillStyle=q.col;let fs=26;const fnt=z=>(q.reg?'':'bold ')+z+'px '+F;g.font=fnt(fs);while(fs>16&&g.measureText(q.l).width+g.measureText(q.r||'').width+40>W-48){fs--;g.font=fnt(fs)}g.textAlign='left';g.fillText(q.l,24,by[i]);g.textAlign='right';g.fillText(q.r||'',W-24,by[i]);g.globalAlpha=1});
+ g.textAlign=h.footR?'right':'left';g.fillStyle='#9a9a9a';g.font='22px '+F;ft.forEach((t,i)=>g.fillText(t,h.footR?W-24:24,y0+i*30));g.textAlign='left';
+ g.font='bold 34px '+F;const tw=g.measureText(c.title).width;g.font='22px '+F;const x0=Math.max(tw,g.measureText(dt(t)).width)+56,aw=W-24-x0;
+ g.fillStyle='#fbbf24';g.textAlign='right';c.w.slice(0,4).forEach((t,i)=>{let fs=20;g.font=fs+'px '+F;while(fs>13&&g.measureText(t).width>aw){fs--;g.font=fs+'px '+F}g.fillText(t,W-24,36+i*26)});return k}
+function card(c,t){if(c.chart)return chartCard(c,t);const L=[c.title+'　'+dt(t),...c.lines,...c.w],W=760,H=40+L.length*30,k=document.createElement('canvas');k.width=W;k.height=H;
+ const g=k.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,W,H);g.textBaseline='top';
+ L.forEach((t,i)=>{g.fillStyle=i==0?'#0b6e66':i>c.lines.length?'#b45309':'#1d1d1b';g.font=(i==0?'bold 22px':'20px')+' "Microsoft YaHei",sans-serif';g.fillText(t,20,18+i*30)});return k}
+const crcT=(()=>{const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc=b=>{let c=-1;for(const x of b)c=crcT[(c^x)&255]^(c>>>8);return(~c)>>>0};
+function tEXt(buf,key,txt){const d=new TextEncoder().encode(key+'\0'+txt),ch=new Uint8Array(12+d.length),dv=new DataView(ch.buffer);
+ dv.setUint32(0,d.length);ch.set([116,69,88,116],4);ch.set(d,8);dv.setUint32(8+d.length,crc(ch.subarray(4,8+d.length)));
+ const u=new Uint8Array(buf),at=u.length-12,o=new Uint8Array(u.length+ch.length);o.set(u.subarray(0,at));o.set(ch,at);o.set(u.subarray(at),at+ch.length);return o}
+const sv=g=>({nodes:g.nodes.map(n=>({id:n.id,type:n.type,x:n.x,y:n.y,v:n.v,ct:n.ct,mt:n.mt,col:n.col?1:0})),links:g.links,dirty:g.dirty,view:g.view,ver:VER});
+function ser(f){return JSON.stringify({v:2,focus:f,...sv(G)}).replace(/[\u0080-\uffff]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'))}
+async function put(code,fn,bytes,mime){
+ try{const r=await fetch(`/api/save?path=${encodeURIComponent(code+'/'+fn)}`,{method:'POST',body:bytes});if(!r.ok)throw 0;toast('已保存：'+(await r.json()).saved+'/'+fn)}
+ catch{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([bytes],{type:mime}));a.download=fn;a.click();toast('未连接本地服务，已下载到浏览器下载文件夹：'+fn)}}
+async function saveJson(n){const code=String(n.v.name||'未命名'),fn=`${code}_${TY[n.type].t}_${stamp(n)}.json`,txt=JSON.stringify({v:2,focus:n.id,...sv(G)},null,1);
+ G.dirty=false;renderTabs();persist();await put(code,fn,new TextEncoder().encode(txt),'application/json')}
+async function save(n){const c=n.c;if(!c||c.err)return toast('输入无效，未保存');
+ const blob=await new Promise(r=>card(c,n.mt).toBlob(r)),png=tEXt(await blob.arrayBuffer(),'workflow',ser(n.id)),code=String(n.v.name||'未命名'),fn=`${code}_${TY[n.type].t}_${stamp(n)}.png`;
+ G.dirty=false;renderTabs();persist();
+ await put(code,fn,png,'image/png')}
+function readTxt(buf){const u=new Uint8Array(buf),dv=new DataView(buf),r={};let p=8;
+ while(p<u.length-8){const L=dv.getUint32(p),t=String.fromCharCode(...u.subarray(p+4,p+8));
+  if(t=='tEXt'){const s=new TextDecoder('latin1').decode(u.subarray(p+8,p+8+L)),i=s.indexOf('\0');r[s.slice(0,i)]=s.slice(i+1)}p+=12+L}return r}
+const tabs=$('#tabs');
+function migrate4(d){const ns=d.nodes||[],ls=d.links||[],T=Object.fromEntries(ns.map(n=>[n.id,n.type]));
+ ls.filter(l=>!Array.isArray(l)&&T[l.a]=='oexe'&&T[l.b]=='be'&&l.bk=='name').forEach(l=>{if(!ls.some(q=>q.a==l.a&&q.b==l.b&&q.bk=='pass'))ls.push({a:l.a,ak:'pass',b:l.b,bk:'pass'})});
+ ns.forEach(n=>{if(n.type!='oexe'||!n.v)return;const v=n.v;
+  if('fprice' in v){v.price=v.fprice;v.shares=v.fshares}else if('amt' in v&&!('shares' in v))v.shares=v.price>0?Math.floor(v.amt/v.price/100)*100:'';
+  ['pprice','pshares','fprice','fshares','famt','amt'].forEach(k=>delete v[k])});
+ ls.forEach(l=>{if(!Array.isArray(l)&&T[l.a]=='oexe'){if(l.ak=='fprice')l.ak='price';if(l.ak=='fshares')l.ak='shares'}});
+ ls.filter(l=>!Array.isArray(l)&&T[l.a]=='open'&&T[l.b]=='oexe'&&l.bk=='name').forEach(l=>['maxStop','minGain'].forEach(k=>{if(!ls.some(q=>q.a==l.a&&q.b==l.b&&q.bk==k))ls.push({a:l.a,ak:k,b:l.b,bk:k})}))}
+function migrate5(d){const ns=d.nodes||[],ls=d.links||[],T=Object.fromEntries(ns.map(n=>[n.id,n.type]));
+ ls.filter(l=>!Array.isArray(l)&&T[l.a]=='oexe'&&T[l.b]=='be'&&l.bk=='name').forEach(l=>{if(!ls.some(q=>q.a==l.a&&q.b==l.b&&q.bk=='target'))ls.push({a:l.a,ak:'target',b:l.b,bk:'target'})})}
+function migrate6(d){const ns=d.nodes||[],ls=d.links||[],T=Object.fromEntries(ns.map(n=>[n.id,n.type]));
+ ns.forEach(n=>{if(n.type=='bexe'&&n.v){const v=n.v;if('fprice' in v){v.price=v.fprice;delete v.fprice}if('fsell' in v){v.sell=v.fsell;delete v.fsell}}});
+ ls.forEach(l=>{if(Array.isArray(l))return;if(T[l.b]=='bexe'){if(l.bk=='fprice')l.bk='price';if(l.bk=='fsell')l.bk='sell'}if(T[l.a]=='bexe'){if(l.ak=='fprice')l.ak='price';if(l.ak=='fsell')l.ak='sell'}});
+ ls.filter(l=>!Array.isArray(l)&&T[l.a]=='be'&&T[l.b]=='bexe'&&l.bk=='name').forEach(l=>['target','pass','tcost','maxSell'].forEach(k=>{if(!ls.some(q=>q.a==l.a&&q.b==l.b&&q.bk==k))ls.push({a:l.a,ak:k,b:l.b,bk:k})}))}
+function migrate7(d){const ns=d.nodes||[],ls=d.links||[],T=Object.fromEntries(ns.map(n=>[n.id,n.type]));
+ ls.filter(l=>!Array.isArray(l)&&T[l.a]=='bexe'&&T[l.b]=='exit'&&l.bk=='name').forEach(l=>[['cost','icost'],['target','target'],['pass','pass'],['remp','pos']].forEach(([a,b])=>{if(!ls.some(q=>q.a==l.a&&q.b==l.b&&q.bk==b))ls.push({a:l.a,ak:a,b:l.b,bk:b})}))}
+function migrate8(d){const ns=d.nodes||[],ls=d.links||[],T=Object.fromEntries(ns.map(n=>[n.id,n.type]));
+ ls.forEach(l=>{if(Array.isArray(l))return;if(T[l.a]=='exit'){if(l.ak=='x3')l.ak='xs';if(l.ak=='s3')l.ak='ss'}});
+ const ox=ns.filter(n=>n.type=='oexe'),ex=ns.filter(n=>n.type=='exit');
+ if(ox.length==1&&ex.length==1&&!ls.some(l=>!Array.isArray(l)&&l.b==ex[0].id&&l.bk=='tp'))ls.push({a:ox[0].id,ak:'ga',b:ex[0].id,bk:'tp'})}
+function migrate9(d){(d.nodes||[]).forEach(n=>{if(n.type=='exit'&&n.v&&(n.v.bias===50||n.v.bias==='50'))n.v.bias=25})}
+function suggestSS(v){const P=+v.price,C0=+v.cost,S=+v.stop,N=+v.shares,mn=+v.minLock,B=+v.bias,PO=+v.pos;if(!(P>C0&&N>0&&PO>0&&B>=0&&B<=PO+1e-9&&mn>0))return;const fl=N*(P-C0),x=Math.min(N,Math.round(N*B/PO/100)*100);if(x>=N)return;const N2=N-x,C2=(N*C0-x*P)/N2;return Math.max(S,Math.ceil((C2+mn/100*fl/N2)*100-1e-9)/100)}
+function migrate10(d){(d.nodes||[]).forEach(n=>{if(n.type=='exit'&&n.v&&(n.v.ss===undefined||n.v.ss===null)){const q=suggestSS(n.v);n.v.ss=q==null?'':q}})}
+function migrate11(d){(d.nodes||[]).forEach(n=>{if(n.type=='exit'&&n.v)delete n.v.minLock})}
+function migrate12(d){const ns=d.nodes||[],ls=d.links||[],T=Object.fromEntries(ns.map(n=>[n.id,n.type])),M={fprice:'price',fsell:'xs',nstop:'ss'};
+ ns.forEach(n=>{if(n.type=='xexe'&&n.v){Object.keys(M).forEach(k=>{if(k in n.v){n.v[M[k]]=n.v[k];delete n.v[k]}})}});
+ ls.forEach(l=>{if(Array.isArray(l))return;if(T[l.b]=='xexe'&&M[l.bk])l.bk=M[l.bk];if(T[l.a]=='xexe'){if(l.ak=='c2')l.ak='c2s';if(l.ak=='lr')l.ak='lr2'}});
+ ls.filter(l=>!Array.isArray(l)&&T[l.a]=='exit'&&T[l.b]=='xexe'&&l.bk=='name').forEach(l=>['icost','target','pass','tp','pos'].forEach(k=>{if(!ls.some(q=>q.a==l.a&&q.b==l.b&&q.bk==k))ls.push({a:l.a,ak:k,b:l.b,bk:k})}))}
+function migrate13(d){(d.nodes||[]).forEach(n=>{if(n.type=='xexe'&&n.v){delete n.v.ss;delete n.v.xs}})}
+function migrate14(d){const ns=d.nodes||[],ls=d.links||[],bx=ns.filter(n=>n.type=='bexe'),xe=ns.filter(n=>n.type=='xexe');
+ xe.forEach(n=>{if(n.v)delete n.v.pos});
+ if(bx.length==1&&xe.length==1&&!ls.some(l=>!Array.isArray(l)&&l.b==xe[0].id&&l.bk=='n0'))ls.push({a:bx[0].id,ak:'shares',b:xe[0].id,bk:'n0'})}
+function migrate15(d){const ns=d.nodes||[],ap=new Set(ns.filter(n=>n.type=='addp').map(n=>n.id));ns.forEach(n=>{if(n.type=='addp'&&n.v)delete n.v.pass});d.links=(d.links||[]).filter(l=>Array.isArray(l)||!(ap.has(l.b)&&l.bk=='pass'))}
+function migrate16(d){const ns=d.nodes||[],ae=new Set(ns.filter(n=>n.type=='adde').map(n=>n.id));ns.forEach(n=>{if(n.type=='adde'&&n.v){delete n.v.pass;delete n.v.cost}});d.links=(d.links||[]).filter(l=>Array.isArray(l)||!(ae.has(l.b)&&(l.bk=='pass'||l.bk=='cost')))}
+function migrate(d){const v=d.ver||0;if(v<4)migrate4(d);if(v<5)migrate5(d);if(v<6)migrate6(d);if(v<7)migrate7(d);if(v<8)migrate8(d);if(v<9)migrate9(d);if(v<10)migrate10(d);if(v<11)migrate11(d);if(v<12)migrate12(d);if(v<13)migrate13(d);if(v<14)migrate14(d);if(v<15)migrate15(d);if(v<16)migrate16(d)}
+const VER=16;
+function fromData(d,skip){if(!skip&&d.ver!==VER)migrate(d);const g={nodes:[],links:[],uid:1,dirty:!!d.dirty,view:d.view||{x:0,y:0,z:1}};(d.nodes||[]).filter(n=>TY[n.type]).forEach(n=>add(n.type,n.x,n.y,n.v,n.id,g,{ct:n.ct,mt:n.mt,col:n.col}));
+ (d.links||[]).forEach(l=>{if(Array.isArray(l)){const A=g.nodes.find(n=>n.id==l[0]),B=g.nodes.find(n=>n.id==l[1]);(A&&B&&DEF[A.type+'>'+B.type]||[]).forEach(([a,b])=>g.links.push({a:A.id,ak:a,b:B.id,bk:b}))}else{const A=g.nodes.find(n=>n.id==l.a),B=g.nodes.find(n=>n.id==l.b);if(A&&B&&B.type!='open'&&(TY[A.type].f.some(f=>f[0]==l.ak)||TY[A.type].o.some(o=>o[0]==l.ak))&&TY[B.type].f.some(f=>f[0]==l.bk))g.links.push(l)}});hist0(g);return g}
+const blankWf=()=>{const g={nodes:[],links:[],uid:1,dirty:false,view:{x:0,y:0,z:1}};hist0(g);return g};
+function defWf(demo){const g={nodes:[],links:[],uid:1,dirty:false,view:{x:0,y:0,z:1}},ex=demo?[{},{price:'10.23',shares:'24400'},{price:'13.75'},{},{price:'15.12',stop:'12.22',ss:'13.65'},{}]:[{},{},{},{},{},{}],
+ N=['open','oexe','be','bexe','exit','xexe'].map((t,i)=>add(t,30+i*480,30,ex[i],0,g));
+ for(let i=0;i<5;i++)DEF[N[i].type+'>'+N[i+1].type].forEach(([a,b])=>g.links.push({a:N[i].id,ak:a,b:N[i+1].id,bk:b}));g.links.push({a:N[1].id,ak:'ga',b:N[4].id,bk:'tp'});g.links.push({a:N[3].id,ak:'shares',b:N[5].id,bk:'n0'});hist0(g);return g}
+let pt;const snap=()=>JSON.stringify({cur:W.indexOf(G),w:W.map(sv)});
+function persist(){try{localStorage.setItem('nf2',snap())}catch{}if(location.protocol!='file:'){clearTimeout(pt);pt=setTimeout(()=>fetch('/api/state',{method:'POST',body:snap()}).catch(()=>{}),300)}}
+try{addEventListener('beforeunload',()=>{if(location.protocol!='file:'&&G)navigator.sendBeacon('/api/state',new Blob([snap()]))})}catch{}
+const title=g=>{const o=g.nodes.find(n=>n.type=='open')||g.nodes[0];return o&&o.v.name?o.v.name+' 工作流':'未命名工作流'};
+function renderTabs(){tabs.innerHTML='';W.forEach(g=>{const t=document.createElement('div'),s=document.createElement('span'),x=document.createElement('b');t.className='tab'+(g==G?' on':'');s.textContent=title(g);
+  x.textContent='×';x.className=g.dirty?'d':'';x.title=g.dirty?'有未保存的修改（点击关闭）':'关闭';x.onclick=ev=>{ev.stopPropagation();closeWf(g)};t.append(s,x);t.onclick=()=>sw(g);tabs.append(t)});
+ const p=document.createElement('div');p.className='tab add';p.textContent='＋';p.title='新建工作流';p.onclick=()=>{const g=blankWf();W.push(g);sw(g)};tabs.append(p)}
+function sw(g){commit();if(g!=G){G.nodes.forEach(n=>n.el.remove());setG(g);G.nodes.forEach(n=>world.append(n.el))}track=false;upd();track=true;renderTabs();persist()}
+function closeWf(g){commit();if(g.dirty&&!confirm('这个工作流有未保存的修改，确定关闭？'))return;const i=W.indexOf(g),was=g==G;W.splice(i,1);if(!W.length)W.push(blankWf());
+ if(was){g.nodes.forEach(n=>n.el.remove());setG(W[Math.max(0,i-1)]);G.nodes.forEach(n=>world.append(n.el))}track=false;upd();track=true;renderTabs();persist()}
+document.ondragover=e=>e.preventDefault();
+document.ondrop=async e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(!f)return;let isJ=/\.json$/i.test(f.name);
+ try{const buf=await f.arrayBuffer(),u=new Uint8Array(buf);if(u[0]==123||(u[0]==239&&u[3]==123))isJ=true;
+  let txt;if(isJ){txt=new TextDecoder().decode(buf).replace(/^\uFEFF/,'');if(!Array.isArray(JSON.parse(txt).nodes))throw 0}else txt=readTxt(buf).workflow;
+  if(!txt)throw 0;const g=fromData(JSON.parse(txt));g.dirty=false;W.push(g);sw(g);toast('已在新标签中还原工作流')}catch{toast(isJ?'这个json文件里没有有效的工作流':'这张图片里没有工作流信息')}};
+document.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const r=cv.getBoundingClientRect(),o=(G.nodes.length%6)*28;add(b.dataset.a,(r.width/2-V.x)/V.z-190+o,(r.height/2-V.y)/V.z-150+o,{});upd();touch()});
+$('#fold').onclick=()=>fetch('/api/open',{method:'POST'}).catch(()=>toast('需通过 start.bat 启动'));
+async function boot(){let st=null;
+ if(location.protocol!='file:')try{const r=await fetch('/api/state');if(r.ok){const t=await r.json();if(t&&t.w&&t.w.length)st=t}}catch{}
+ if(!st)try{st=JSON.parse(localStorage.getItem('nf2')||'null')}catch{}
+ try{if(st&&st.w&&st.w.length){W=st.w.map(fromData);setG(W[Math.min(st.cur||0,W.length-1)])}}catch{W=[];G=null}
+ if(!G){setG(defWf(true));W=[G]}
+ G.nodes.forEach(n=>world.append(n.el));track=false;upd();track=true;renderTabs();persist()}
+boot();
+if(location.protocol=='file:'){const h=$('#bar span');h.textContent='⚠ 当前是直接打开的文件，保存会进浏览器下载文件夹。请双击 start.bat，用它打开的 127.0.0.1:8199 网址';h.style.color='var(--bad)';h.style.fontSize='13px'}
+</script>
